@@ -34,13 +34,16 @@ pe "cp /bin/bash ./bin"
 pe "ldd /bin/bash"
 pe "mkdir lib lib64"
 pe "$dir/copywithlib.sh /bin/bash"
-pe "$dir/copywithlib.sh /bin/ls"
-pe "$dir/copywithlib.sh /bin/mkdir"
-pe "$dir/copywithlib.sh /bin/ps"
-pe "$dir/copywithlib.sh /bin/mount"
-pe "$dir/copywithlib.sh /bin/cat"
-pe "$dir/copywithlib.sh /bin/pwd"
-pe "$dir/copywithlib.sh /bin/hostname"
+p "copying\n ... /bin/ls\n ... /bin/mkdir\n ... /bin/ps\n ... /bin/mount\n ... /bin/cat\n ... /bin/pwd\n ... /bin/hostname\n ... /usr/bin/stress"
+$dir/copywithlib.sh /bin/ls
+$dir/copywithlib.sh /bin/mkdir
+$dir/copywithlib.sh /bin/ps
+$dir/copywithlib.sh /bin/mount
+$dir/copywithlib.sh /bin/cat
+$dir/copywithlib.sh /bin/pwd
+$dir/copywithlib.sh /bin/hostname
+$dir/copywithlib.sh /usr/bin/stress
+
 pe "ls -laR"
 pe "chroot ."
 
