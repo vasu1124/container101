@@ -3,7 +3,8 @@
 ########################
 # include the magic
 ########################
-. /vagrant/demo/demo-magic.sh
+dir="${0%/*}"
+. $dir/demo-magic.sh
 
 
 ########################

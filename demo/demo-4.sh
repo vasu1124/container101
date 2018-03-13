@@ -27,9 +27,8 @@ TYPE_SPEED=10
 # hide the evidence
 clear
 
-pe "docker login"
-pe "docker tag container:1.0 vasu1124/container:1.0"
-pe "docker push vasu1124/container:1.0"
+pe "cd container; tar -c . | docker import - container:1.0"
+pe "docker images"
+pe "docker run -it container:1.0 /bin/bash"
 
-pe "docker search centos"
-pe "docker run -it centos:7 /bin/bash"
+pe "docker ps -a"

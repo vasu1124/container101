@@ -3,7 +3,8 @@
 ########################
 # include the magic
 ########################
-. /vagrant/demo/demo-magic.sh
+dir="${0%/*}"
+. $dir/demo-magic.sh
 
 
 ########################
@@ -32,14 +33,14 @@ pe "mkdir bin"
 pe "cp /bin/bash ./bin"
 pe "ldd /bin/bash"
 pe "mkdir lib lib64"
-pe "/vagrant/demo/copywithlib.sh /bin/bash"
-pe "/vagrant/demo/copywithlib.sh /bin/ls"
-pe "/vagrant/demo/copywithlib.sh /bin/mkdir"
-pe "/vagrant/demo/copywithlib.sh /bin/ps"
-pe "/vagrant/demo/copywithlib.sh /bin/mount"
-pe "/vagrant/demo/copywithlib.sh /bin/cat"
-pe "/vagrant/demo/copywithlib.sh /bin/pwd"
-pe "/vagrant/demo/copywithlib.sh /bin/hostname"
+pe "$dir/copywithlib.sh /bin/bash"
+pe "$dir/copywithlib.sh /bin/ls"
+pe "$dir/copywithlib.sh /bin/mkdir"
+pe "$dir/copywithlib.sh /bin/ps"
+pe "$dir/copywithlib.sh /bin/mount"
+pe "$dir/copywithlib.sh /bin/cat"
+pe "$dir/copywithlib.sh /bin/pwd"
+pe "$dir/copywithlib.sh /bin/hostname"
 pe "ls -laR"
 pe "chroot ."
 
