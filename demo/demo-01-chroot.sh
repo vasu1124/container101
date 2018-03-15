@@ -27,9 +27,8 @@ DEMO_PROMPT="${GREEN}➜ ${CYAN}\W "
 rm -rf container
 clear
 
-pe "mkdir container"
+pe "mkdir -p container/bin"
 pe "cd container"
-pe "mkdir bin"
 pe "cp /bin/bash ./bin"
 pe "ldd /bin/bash"
 pe "mkdir lib lib64"

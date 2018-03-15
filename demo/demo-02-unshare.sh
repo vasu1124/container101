@@ -26,11 +26,11 @@ DEMO_PROMPT="${GREEN}➜ ${CYAN}\W "
 # hide the evidence
 clear
 
+pe "id"
 pe "ls -la /proc/self/ns"
 pe "cat /proc/self/cgroup"
 pe "cat /proc/self/uid_map"
-pe "whoami"
 pe "unshare --map-root-user --user"
 
-pe "whoami"
+pe "id"
 wait

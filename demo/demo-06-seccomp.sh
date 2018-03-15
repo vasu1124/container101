@@ -27,9 +27,8 @@ TYPE_SPEED=10
 # hide the evidence
 clear
 
-pe "ls -la /proc/self/ns"
-pe "cat /proc/self/cgroup"
-pe "cgcreate -g cpu,memory,blkio,devices,pids,freezer:/sandbox"
-pe "cgget -r cpu.shares /sandbox"
-pe "cgset -r cpu.shares=5 /sandbox"
-pe "cgexec -g cpu,memory,blkio,devices,pids,freezer:/sandbox unshare --mount --ipc --pid --fork chroot container"
+cd $dir/..
+
+pe "docker build -f Dockerfile -t 'vasu1124/helloworld:v1.0' ."
+pe "docker run --rm vasu1124/helloworld:v1.0"
+pe "docker run --rm --security-opt seccomp=seccomp/deny.json vasu1124/helloworld:v1.0"
