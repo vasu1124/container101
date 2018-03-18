@@ -30,7 +30,7 @@ I put together the following introduction to containers with the goal to jump st
 
 ### [06 Swarm Intelligence with Docker Registry](docs/06registry.md)
 
-### [07 What about Rocket?](docs/07rocket.md)
+### [07 What about rkt?](docs/07rocket.md)
 
 ### [08 Tuning of Permissions & Security](docs/08security.md)
 

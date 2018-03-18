@@ -6,6 +6,7 @@ A quick look into the other open source container runtime from CoreOS: [rkt](htt
 
 The rkt cli includes many similar option as docker. In fact, there is an option to directly download images from Docker Hub and run them, which we are going to use. But process model from rkt and docker substantially [differ](https://coreos.com/rkt/docs/latest/rkt-vs-other-projects.html#rkt-vs-docker):
 ![process model](https://coreos.com/rkt/docs/latest/rkt-vs-docker-process-model.png)
+
 The docker cli commands are effectively executed by a daemon process, which differs from best practices for Unix process and privilege separation. As an answer, Docker has added a number of [security](https://docs.docker.com/engine/security/security/) measures. 
 
 When rkt was announced it caused a lot of [stir](https://news.ycombinator.com/item?id=8682525),today  Kubernetes with its [CRI](http://blog.kubernetes.io/2016/12/container-runtime-interface-cri-in-kubernetes.html) can effectively mask the details of the underlying container engine.
@@ -78,6 +79,8 @@ Looks like there is no compatible `resolv.conf` supplied. That is because rkt re
 You can now explore the option to build your own OCI compliant container runtime. Here are somepointers to get you started: 
 * [Build Your Own Container Using Less than 100 Lines of Go](https://www.infoq.com/articles/build-a-container-golang) by Julz Friedman
 
-* DockerCon 2017 Talk by Liz Rice [![What Have Namespaces Done for You Lately?](https://img.youtube.com/vi/MHv6cWjvQjM/0.jpg)](https://www.youtube.com/watch?v=MHv6cWjvQjM) 
+* DockerCon 2017 Talk by Liz Rice 
+
+[![What Have Namespaces Done for You Lately?](https://img.youtube.com/vi/MHv6cWjvQjM/0.jpg)](https://www.youtube.com/watch?v=MHv6cWjvQjM) 
 
 * Safari Course Video [Building Containers from Scratch with Go](https://www.safaribooksonline.com/library/view/building-containers-from/9781491988404/) by Liz Rice
