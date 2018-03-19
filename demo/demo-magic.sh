@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 ###############################################################################
+# https://github.com/paxtonhare/demo-magic
 #
 # demo-magic.sh
 #
