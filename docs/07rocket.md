@@ -4,12 +4,12 @@ A quick look into the other open source container runtime from CoreOS: [rkt](htt
 
 (I have not looked at [railcar](https://github.com/oracle/railcar) or other options yet).
 
-The rkt cli includes many similar option as docker. In fact, there is an option to directly download images from Docker Hub and run them, which we are going to use. But process model from rkt and docker substantially [differ](https://coreos.com/rkt/docs/latest/rkt-vs-other-projects.html#rkt-vs-docker):
+The rkt cli includes many similar option as docker. In fact, there is a newer option to directly download images from Docker Hub and run them, which we are going to use. The process model from rkt and docker substantially [differ](https://coreos.com/rkt/docs/latest/rkt-vs-other-projects.html#rkt-vs-docker):
 ![process model](https://coreos.com/rkt/docs/latest/rkt-vs-docker-process-model.png)
 
-The docker cli commands are effectively executed by a daemon process, which differs from best practices for Unix process and privilege separation. As an answer, Docker has added a number of [security](https://docs.docker.com/engine/security/security/) measures. 
+The docker cli commands are effectively executed by a daemon process, which deviates from best practices for Unix process and privilege separation. As an answer, Docker has added a number of [security](https://docs.docker.com/engine/security/security/) measures. 
 
-When rkt was announced it caused a lot of [stir](https://news.ycombinator.com/item?id=8682525),today  Kubernetes with its [CRI](http://blog.kubernetes.io/2016/12/container-runtime-interface-cri-in-kubernetes.html) can effectively mask the details of the underlying container engine.
+When rkt was announced it caused a lot of [stir](https://news.ycombinator.com/item?id=8682525),today Kubernetes with its [CRI](http://blog.kubernetes.io/2016/12/container-runtime-interface-cri-in-kubernetes.html) can effectively mask the details of the underlying container engine. Beware that some features, e.g. re-adjusting cgroup resource constraints of an already running container (`docker update ...`), are not supported via Kubernetes. 
 
 ### Exercise
 
@@ -75,8 +75,8 @@ drwxr-xr-x 1 0 0 4096 Mar 17 20:57 ..
 ```
 Looks like there is no compatible `resolv.conf` supplied. That is because rkt requires you to make a conscious decision if you want to map the host dns (or any other) configuration with `--dns host` into the container 
 
-### container from scratch
-You can now explore the option to build your own OCI compliant container runtime. Here are somepointers to get you started: 
+### Further information
+You can now explore the option to build your own OCI compliant container runtime. Here are some pointers to get you started with 'containers from scratch': 
 * [Build Your Own Container Using Less than 100 Lines of Go](https://www.infoq.com/articles/build-a-container-golang) by Julz Friedman
 
 * DockerCon 2017 Talk by Liz Rice 

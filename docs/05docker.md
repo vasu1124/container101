@@ -26,7 +26,7 @@ REPOSITORY            TAG                 IMAGE ID            CREATED           
 container             1.0                 b4197ce50675        4 seconds ago       7.97 MB
 ```
 
-With the docker image, we can now utilize docker to setup namespaces & cgroups (and networks and volumes) and run your container. Notice, how a number of dependancies automatically have been taken care of for you, e.g. the virtual filesystems `/proc`, `/sys` & `/dev` have been already provided in your mount namespace, a random hostname has been configured (and if we had the `ip` tool, you would find a namespaced network), even the folder  `/etc` has been provisioned with useable/correct information:
+With the docker image, we can now utilize docker to setup namespaces & cgroups (and networks and volumes) and run your container. Notice, how a number of dependencies automatically have been taken care of for you, e.g. the virtual file systems `/proc`, `/sys` & `/dev` have been already provided in your mount namespace, a random hostname has been configured (and if we had the `ip` tool, you would find a namespaced network), even the folder  `/etc` has been provisioned with useable/correct information. And you find that docker automatically sets cgroup boundaries: 
 ```
 # docker run -it container:1.0 /bin/bash
 bash-4.3# hostname
@@ -70,6 +70,19 @@ lrwxrwxrwx  1 0 0   12 Mar 14 22:00 mtab -> /proc/mounts
 bash-4.3# cat >I-was-here
 covfefe
 <ctrl-d>
+
+bash-4.3# cat /proc/self/cgroup
+11:blkio:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
+10:memory:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
+9:perf_event:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
+8:freezer:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
+7:hugetlb:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
+6:pids:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
+5:net_cls,net_prio:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
+4:cpu,cpuacct:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
+3:cpuset:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
+2:devices:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
+1:name=systemd:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
 
 bash-4.3# exit
 exit
