@@ -32,4 +32,5 @@ pe "docker tag container:1.0 vasu1124/container:1.0"
 pe "docker push vasu1124/container:1.0"
 
 pe "docker search centos"
+pe "uname -a"
 pe "docker run -it centos:7 /bin/bash"
