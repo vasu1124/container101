@@ -38,12 +38,12 @@ Hello World
 ------ ----------- ----------- --------- --------- ----------------
 100.00    0.000000                   147           total
 ```
-As you can see, there are a number of syscalls, if you trace this program with a debugger, you will find that the `Println()` function to `stdout` at some point is translated to `n, err := syscall.Write(fd.Sysfd, p[nn:max])` and then to `r0, _, e1 := Syscall(SYS_WRITE, uintptr(fd), uintptr(_p0), uintptr(len(p)))`, it is the `write` call in row 1. There are around 340 syscalls in the Linux kernel, see https://syscalls.kernelgrok.com/.
+As you can see, there are a number of syscalls. If you trace this program with a debugger, you will find that the `Println()` function to `stdout` at some point is translated to `n, err := syscall.Write(fd.Sysfd, p[nn:max])` and then to `r0, _, e1 := Syscall(SYS_WRITE, uintptr(fd), uintptr(_p0), uintptr(len(p)))`; it is the `write` call in row 1. There are around 340 syscalls in the Linux kernel, see https://syscalls.kernelgrok.com/.
 
 The fast thinker in you is already getting ahead and asking:
 - can we profile an executable and only allow needed syscalls?
 - can we set a "trip wire" around an executable and trigger an alert if a syscall is made that is not required?
-- or kill the process immediately? As this cloud be an intrusion ...
+- or kill the process immediately? As this could be an intrusion ...
 - and many more runtime security type of ideas ...
 
 First, check if seccomp is enabled with docker:
@@ -65,7 +65,6 @@ CONFIG_SECCOMP=y
 Well, then let us build a container from a baseline image like centos and do some experiments (we could have just packaged helloworld, but then we would have no fun). The Dockerfile as follows:
 ```
 FROM centos:7
-LABEL maintainer="vasu1124@actvirtual.com"
 
 COPY /helloworld /
 CMD ["/helloworld"]
@@ -92,6 +91,7 @@ Successfully built 863fc5244614
 ```
 
 We are now making use of the `--security-opt` facility of docker and we test with various seccomp profiles compiled in JSON format. The following actions are possible:
+
 |Action        | Description                                                |
 |--------------|------------------------------------------------------------|
 |SCMP_ACT_KILL |Kill with a exit status of 0x80 + 31 (SIGSYS) = 159         |
@@ -134,7 +134,7 @@ mkdir: cannot create directory 'test': Operation not permitted
 ```
 As expected, the syscalls are not permitted.
 
-Further information:
+### Further information:
 * The Beginner's Guide to Linux Syscalls by Liz Rice
 
 [![The Beginner's Guide to Linux Syscalls](https://img.youtube.com/vi/BdfNrs_oeko/0.jpg)](https://www.youtube.com/watch?v=BdfNrs_oeko)
