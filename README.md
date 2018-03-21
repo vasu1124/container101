@@ -34,10 +34,8 @@ I put together the following introduction to containers with the goal to jump st
 
 ### [08 Tuning of Permissions & Security](docs/08security.md)
 
-### [09 Inspect some Syscalls](docs/09syscalls.md)
+### [09 Inspect and Restrict Syscalls](docs/09syscalls.md)
 
 ## Further Reading
 - [A Practical Introduction to Container Terminology](https://developers.redhat.com/blog/2018/02/22/container-terminology-practical-introduction/) by Scott McCarty
-- todo container from scratch
-- [The Beginner's Guide to Linux Syscalls](https://www.youtube.com/watch?v=BdfNrs_oeko) by Liz Rice
-- todo docker labs
+- [Docker Labs](https://github.com/docker/labs/blob/master/README.md) (docker specific)
