@@ -39,3 +39,4 @@ I put together the following introduction to containers with the goal to jump st
 ## Further Reading
 - [A Practical Introduction to Container Terminology](https://developers.redhat.com/blog/2018/02/22/container-terminology-practical-introduction/) by Scott McCarty
 - [Docker Labs](https://github.com/docker/labs/blob/master/README.md) (docker specific)
+- [The Missing Introduction To Containerization](https://medium.com/devopslinks/the-missing-introduction-to-containerization-de1fbb73efc5) by Aymen El Amri, a very nice in-depth article on the history with examples.
