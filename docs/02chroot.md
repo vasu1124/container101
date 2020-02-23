@@ -23,7 +23,7 @@ This can make chroot difficult to use as a general sandboxing mechanism.
 
 Let's create a fresh container directory and fill it with some binaries (e.g. typical shell tools) and in the end call chroot on it:
 ```
-# mkdir -p container/bin
+mkdir -p container/bin
 cd container
 cp /bin/bash ./bin
 ```
@@ -111,7 +111,7 @@ exit
 
 `chroot` only "mapped" your container filesystem to the root level "/". All other namespaces were not mapped. Therefore, once you mounted `/proc`, the `ps` tools was able to look into all running processes. Furthermore, our container was not isolated at all, changes in the container were reflected in the inherited root environment and have to be cleaned:
 ```
-# mount | grep "/proc "
+# mount | grep "/proc"
 proc on /proc type proc (rw,nosuid,nodev,noexec,relatime)
 proc on /home/vagrant/container/proc type proc (rw,relatime)
 # umount /home/vagrant/container/proc
@@ -122,13 +122,14 @@ If you are now gathering a list of all your favorite utilities and want to build
 
 BusyBox is a multipurpose single executable, optimized in size, that combines many common Unix utilities:
 ```
-# mkdir -p busybox/bin
-# cd busybox
-# wget -O ./bin/busybox https://www.busybox.net/downloads/binaries/1.28.1-defconfig-multiarch/busybox-x86_64
-# chmod a+x ./bin/busybox
+apt-get install busybox-static
 
-# ./bin/busybox
-BusyBox v1.28.1 (2018-02-15 14:34:02 CET) multi-call binary.
+mkdir -p busybox/bin
+cd busybox
+cp /bin/busybox bin/
+
+./bin/busybox
+BusyBox v1.27.2 (Ubuntu 1:1.27.2-2ubuntu3.2) multi-call binary.
 BusyBox is copyrighted by many authors between 1998-2015.
 Licensed under GPLv2. See source distribution for detailed
 copyright notices.
@@ -139,9 +140,10 @@ Usage: busybox [function [arguments]...]
    or: function [arguments]...
 
 	BusyBox is a multi-call binary that combines many common Unix
-	utilities into a single executable.  Most people will create a
-	link to busybox for each function they wish to use and BusyBox
-	will act like whatever it was invoked as.
+	utilities into a single executable.  The shell in this build
+	is configured to run built-in utilities without $PATH search.
+	You don't need to install a link to busybox for each utility.
+	To run external program, use full path (/sbin/ip instead of ip).
 
 Currently defined functions:
 	[, [[, acpid, add-shell, addgroup, adduser, adjtimex, arch, arp, arping, ash, awk, base64, basename, beep,
@@ -151,14 +153,14 @@ Currently defined functions:
 
 With BusyBox you can prime your container quikly with allmost 400 tools:
 ```
-# ./bin/busybox --install ./bin/
-# chroot . /bin/hush
+./bin/busybox --install ./bin/
+chroot . /bin/sh
 
-/ # mkdir /proc
-/ # mount -t proc proc /proc
-/ # top
+# inside the chroot environment
+mkdir /proc
+mount -t proc proc /proc
+top
 ```
 
 ### Next ...
 In the next sections we will learn how to utilize proper namespace virtualization/isolation and cgroups.
-
