@@ -4,6 +4,7 @@ Have [vagrant](https://www.vagrantup.com) configured in your environment. `git c
 
 Or if you have an ubuntu system at hand, you can also install the required tools manually:
 ```
+add-apt-repository -y ppa:longsleep/golang-backports
 apt-get update
 apt-get install -y docker.io
 apt-get install -y pv
@@ -12,15 +13,8 @@ apt-get install -y stress
 apt-get install -y pax-utils
 apt-get install -y sysdig
 apt-get install -y cgroup-tools
-wget https://dl.google.com/go/go1.10.linux-amd64.tar.gz
-tar -C /usr/local -xzf go1.10.linux-amd64.tar.gz
-echo 'export PATH=${PATH}:/usr/local/go/bin' >>/etc/profile
-gpg --update-trustd
-gpg --recv-key 18AD5014C99EF7E3BA5F6CE950BDD3E0FC8A365E
-wget https://github.com/rkt/rkt/releases/download/v1.29.0/rkt_1.29.0-1_amd64.deb
-wget https://github.com/rkt/rkt/releases/download/v1.29.0/rkt_1.29.0-1_amd64.deb.asc
-gpg --verify rkt_1.29.0-1_amd64.deb.asc
-dpkg -i rkt_1.29.0-1_amd64.deb
+apt-get install -y golang-go
+apt-get install -y rkt
 ```
 
 Unless otherwise noted, all examples/excercises are executed with `root`-privileges.

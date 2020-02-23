@@ -12,7 +12,7 @@ Vagrant.configure("2") do |config|
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://vagrantcloud.com/search.
-  config.vm.box = "ubuntu/xenial64"
+  config.vm.box = "ubuntu/bionic64"
 
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -64,6 +64,7 @@ config.vm.synced_folder ENV['GOPATH'], "/go"
   # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
   # documentation for more information about their specific syntax and use.
   config.vm.provision "shell", inline: <<-SHELL
+     add-apt-repository -y ppa:longsleep/golang-backports
      apt-get update
      apt-get install -y docker.io
      apt-get install -y pv
@@ -72,14 +73,7 @@ config.vm.synced_folder ENV['GOPATH'], "/go"
      apt-get install -y pax-utils
      apt-get install -y sysdig
      apt-get install -y cgroup-tools
-     wget https://dl.google.com/go/go1.10.linux-amd64.tar.gz
-     tar -C /usr/local -xzf go1.10.linux-amd64.tar.gz
-     echo 'export PATH=${PATH}:/usr/local/go/bin' >>/etc/profile
-     gpg --update-trustd
-     gpg --recv-key 18AD5014C99EF7E3BA5F6CE950BDD3E0FC8A365E
-     wget https://github.com/rkt/rkt/releases/download/v1.29.0/rkt_1.29.0-1_amd64.deb
-     wget https://github.com/rkt/rkt/releases/download/v1.29.0/rkt_1.29.0-1_amd64.deb.asc
-     gpg --verify rkt_1.29.0-1_amd64.deb.asc
-     dpkg -i rkt_1.29.0-1_amd64.deb
+     apt-get install -y golang-go
+     apt-get install -y rkt
   SHELL
 end
