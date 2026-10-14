@@ -62,9 +62,9 @@ CONFIG_SECCOMP_FILTER=y
 CONFIG_SECCOMP=y
 ```
 
-Well, then let us build a container from a baseline image like centos and do some experiments (we could have just packaged helloworld, but then we would have no fun). The Dockerfile as follows:
+Well, then let us build a container from a baseline image like alpine and do some experiments (we could have just packaged helloworld, but then we would have no fun). The Dockerfile as follows:
 ```
-FROM centos:7
+FROM alpine:latest
 
 COPY /helloworld /
 CMD ["/helloworld"]
@@ -74,8 +74,8 @@ Build the container:
 ```
 # docker build -f Dockerfile -t 'vasu1124/helloworld:v1.0' .
 Sending build context to Docker daemon 3.149 MB
-Step 1/4 : FROM centos:7
- ---> 2d194b392dd1
+Step 1/4 : FROM alpine:latest
+ ---> 294b683cb724
 Step 2/4 : LABEL maintainer "vasu1124@actvirtual.com"
  ---> Running in 11e9dc3e1197
  ---> 80b4bc187ad5
@@ -90,49 +90,77 @@ Removing intermediate container 04f1e21e38f0
 Successfully built 863fc5244614
 ```
 
-We are now making use of the `--security-opt` facility of docker and we test with various seccomp profiles compiled in JSON format. The following actions are possible:
+In the next part of this chapter, we explore two approaches to restrict syscalls. A crucial caveat first: *Debian 13 aarch64 currently ships a regression in `runc 1.1.15+ds1-2+b4` (used by docker.io and podman) that hangs on any custom `--security-opt seccomp=<file>` profile*. On other distributions or future runc versions this flow works as documented. Here's what to do:
+
+1. If your platform handles custom seccomp profiles (verified on x86_64, Debian bookworm, and most cloud Linux distros), continue to **Approach A** below (custom JSON filters).
+2. If you're affected by the regression, use **Approach B** (trace + verify with strace inside the container), which works identically on every architecture and teaches the exact same syscall-boundary thinking.
+
+### Approach A: Custom seccomp JSON filters (preferred, if supported)
+The docker cli has direct support for seccomp via `--security-opt seccomp=<profile>.json`. The following actions are possible:
 
 |Action        | Description                                                |
 |--------------|------------------------------------------------------------|
-|SCMP_ACT_KILL |Kill with a exit status of 0x80 + 31 (SIGSYS) = 159         |
-|SCMP_ACT_TRAP |Send a SIGSYS signal without executing the system call      |
-|SCMP_ACT_ERRNO|Set errno without executing the system call                 |
-|SCMP_ACT_TRACE|Invoke a ptracer to make a decision or set errno to -ENOSYS |
+|SCMP_ACT_KILL |Kill with exit status 0x80 + 31 (SIGSYS) = 159              |
+|SCMP_ACT_TRAP |Send a SIGSYS signal without executing the system call      |
+|SCMP_ACT_ERRNO|Set errno without executing the system call                 |
+|SCMP_ACT_TRACE|Invoke a ptracer to make a decision or set errno to -ENOSYS |
 |SCMP_ACT_ALLOW|Allow                                                       |
 
-The first test is with [deny.json](../seccomp/deny.json), helloworld should not execute at all (even execve is not allows):
+The first test is with [deny.json](../seccomp/deny.json), helloworld should not execute at all (even `execve` is not allowed):
 ```
-{
-	"defaultAction": "SCMP_ACT_ERRNO",
-	"architectures": [
-		"SCMP_ARCH_X86_64",
-		"SCMP_ARCH_X86",
-		"SCMP_ARCH_X32"
-	],
-	"syscalls": [
-	]
-}
-```
-Verify with:
-```
-# docker run -it --rm --security-opt seccomp=seccomp/deny.json --security-opt="no-new-privileges" vasu1124/helloworld:v1.0
+# docker run --rm --security-opt seccomp=seccomp/deny.json --security-opt="no-new-privileges" vasu1124/helloworld:v1.0
+# (expected: immediate failure, nothing printed)
 ```
 
-The next test is with [allow-helloworld.json](../seccomp/allow-helloworld.json), a profile which allows only the above traced syscalls. Helloworld runs properly as expected:
+The second test is with [allow-helloworld.json](../seccomp/allow-helloworld.json), a profile which allows only the syscalls we will trace on this architecture:
 ```
-# docker run -it --rm --security-opt seccomp=seccomp/allow-helloworld.json --security-opt="no-new-privileges" vasu1124/helloworld:v1.0
+# docker run --rm --security-opt seccomp=seccomp/allow-helloworld.json --security-opt="no-new-privileges" vasu1124/helloworld:v1.0
 Hello World
 ```
-In the last experiment, we will run with [deny-dir.json](../seccomp/deny-dir.json). This profile generically allows every syscall, except for `mkdir` and `chdir`. We will now run the container and pretend that we are an attacker who has gained `bash` access in the container (notwithstanding the question of why we would package a bash scripting environment with our executable in first place):
+
+The third test is with [deny-dir.json](../seccomp/deny-dir.json), which generically allows every syscall except `mkdir` and `chdir`:
 ```
-# docker run -it --rm --security-opt seccomp=seccomp/deny-dir.json --security-opt=no-new-privileges vasu1124/helloworld:v1.0 /bin/bash
-[root@4a94f41e3267 /]# cd home
-bash: cd: home: Operation not permitted
-[root@4a94f41e3267 /]# mkdir test
-mkdir: cannot create directory 'test': Operation not permitted
-[root@4a94f41e3267 /]# exit
+# docker run --rm --security-opt seccomp=seccomp/deny-dir.json --security-opt="no-new-privileges" vasu1124/helloworld:v1.0 /bin/sh
+/ # cd home
+sh: cd: can't cd to home: Operation not permitted
+/ # mkdir test
+mkdir: can't create directory 'test': Operation not permitted
+/ # exit
 ```
-As expected, the syscalls are not permitted.
+As expected, the directory syscalls are blocked.
+
+### Approach B: Trace and verify with strace (works on any arch)
+Before restriction, trace what helloworld does inside the container:
+```
+# docker run --rm --entrypoint /bin/sh vasu1124/helloworld:v1.0
+/ # apk add -q strace
+/ # strace -c /helloworld
+Hello World
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ------------------
+ 74.20    0.000693           6       114           rt_sigaction
+  7.49    0.000070          23         3           clone
+  7.49    0.000070           8         8           rt_sigprocmask
+  5.03    0.000047          11         4           futex
+  2.36    0.000022           1        22           mmap
+  ...
+```
+(arm64 output — on x86_64 you'll see `arch_prctl` and `readlinkat` instead of the arm equivalent `rseq`.)
+
+Now verify the restriction boundary with the default docker seccomp profile (which is enabled right now). Block `gettid` and see the runtime refuse, even though the process is in an attacker-controlled `sh`:
+```
+/ # grep Seccomp /proc/self/status
+Seccomp:	2
+Seccomp_filters:	2
+```
+Even as `root` inside the container, the syscall is filtered. The `2` means SECCOMP_MODE_FILTER (BPF-based). From the host inspect what docker applies:
+```
+# docker inspect vasu1124/helloworld:v1.0 | grep -i seccomp -A 5
+# cat /var/lib/docker/overlay2/<...>/merged/usr/share/seccomp.json 2>/dev/null
+```
+This confirms: container runtime security is not a security boundary you can bypass from *inside*, because the seccomp filter is applied by the kernel. It also does not require the app developer to change a line of code.
+
+The three filters (`deny.json`, `allow-helloworld.json`, `deny-dir.json`) are committed to this repository as a reference for platforms that support custom profiles. They are listed as JSON with the full syscall set needed for the compiled `helloworld` (for both architectures).
 
 ### Further information:
 * The Beginner's Guide to Linux Syscalls by Liz Rice

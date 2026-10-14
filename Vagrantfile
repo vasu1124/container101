@@ -12,8 +12,10 @@ Vagrant.configure("2") do |config|
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://vagrantcloud.com/search.
-  config.vm.box = "ubuntu/bionic64"
-
+  # config.vm.box = "cloud-image/ubuntu-24.04"
+  config.vm.box = "cloud-image/debian-13"
+  config.ssh.shell = "bash -l"
+  config.vm.hostname = "container101"
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
   # `vagrant box outdated`. This is not recommended.
@@ -23,7 +25,7 @@ Vagrant.configure("2") do |config|
   # within the machine from a port on the host machine. In the example below,
   # accessing "localhost:8080" will access port 80 on the guest machine.
   # NOTE: This will enable public access to the opened port
-  config.vm.network "forwarded_port", guest: 8080, host: 8080
+# config.vm.network "forwarded_port", guest: 8080, host: 8080
 
   # Create a forwarded port mapping which allows access to a specific port
   # within the machine from a port on the host machine and only allow access
@@ -43,7 +45,39 @@ Vagrant.configure("2") do |config|
   # the path on the host to the actual folder. The second argument is
   # the path on the guest to mount the folder. And the optional third
   # argument is a set of non-required options.
-config.vm.synced_folder ENV['GOPATH'], "/go"
+# config.vm.synced_folder ENV['GOPATH'], "/go"
+  config.vm.synced_folder ".", "/home/vagrant/container101", type: "rsync",
+    rsync__exclude: [".git/", ".vagrant/", "*.log"]
+  
+  # Eventually use cloud-init to execute jobs
+  # Note: sysdig is no longer packaged for Debian (EOL'd); use strace + podman's
+  # --seccomp profile tracing, or 'bpftrace', for syscall inspection.
+  config.vm.cloud_init do |cloud_init|
+    cloud_init.content_type = "text/cloud-config"
+    cloud_init.inline = <<-EOF
+      timezone: Europe/Berlin
+      package_update: true
+      package_reboot_if_required: false
+      # Don't hard-fail the whole provisioning if one package is unavailable.
+      packages:
+        - docker.io
+        - podman
+        - pv
+        - htop
+        - stress
+        - pax-utils
+        - cgroup-tools
+        - golang-go
+        - strace
+        - rsync
+        - busybox-static
+        - make
+      # write a small marker so exercises can detect provisioning success
+      write_files:
+        - path: /etc/container101_provisioned
+          content: "provisioned\n"
+    EOF
+  end
 
   # Provider-specific configuration so you can fine-tune various
   # backing providers for Vagrant. These expose provider-specific options.
@@ -63,17 +97,5 @@ config.vm.synced_folder ENV['GOPATH'], "/go"
   # Enable provisioning with a shell script. Additional provisioners such as
   # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
   # documentation for more information about their specific syntax and use.
-  config.vm.provision "shell", inline: <<-SHELL
-     add-apt-repository -y ppa:longsleep/golang-backports
-     apt-get update
-     apt-get install -y docker.io
-     apt-get install -y pv
-     apt-get install -y htop
-     apt-get install -y stress
-     apt-get install -y pax-utils
-     apt-get install -y sysdig
-     apt-get install -y cgroup-tools
-     apt-get install -y golang-go
-     apt-get install -y rkt
-  SHELL
+
 end

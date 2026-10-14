@@ -28,9 +28,15 @@ clear
 
 pe "id"
 pe "ls -la /proc/self/ns"
-pe "cat /proc/self/cgroup"
+pe "cat /proc/self/cgroup"                 # v2: a single 0:: line (unified hierarchy)
+pe "stat -fc %T /sys/fs/cgroup"            # cgroup2fs = cgroup v2
 pe "cat /proc/self/uid_map"
 pe "unshare --map-root-user --user"
 
 pe "id"
+pe "ls -la /proc/self/ns"
+pe "cat /proc/self/cgroup"
+pe "cat /proc/self/uid_map"
+pe "echo $$"
+p "# remember this PID - the freeze demo (demo-02-freeze.sh) will need it"
 wait

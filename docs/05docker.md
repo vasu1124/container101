@@ -29,64 +29,55 @@ container             1.0                 b4197ce50675        4 seconds ago     
 With the docker image, we can now utilize docker to setup namespaces & cgroups (and networks and volumes) and run your container. Notice, how a number of dependencies automatically have been taken care of for you, e.g. the virtual file systems `/proc`, `/sys` & `/dev` have been already provided in your mount namespace, a random hostname has been configured (and if we had the `ip` tool, you would find a namespaced network), even the folder  `/etc` has been provisioned with useable/correct information. And you find that docker automatically sets cgroup boundaries: 
 ```
 # docker run -it container:1.0 /bin/bash
-bash-4.3# hostname
+bash-5.2# hostname
 e8c4dbbede0c
 
-bash-4.3# ls -la
-total 28
-drwxr-xr-x  14 0 0 4096 Mar 14 22:00 .
-drwxr-xr-x  14 0 0 4096 Mar 14 22:00 ..
--rwxr-xr-x   1 0 0    0 Mar 14 22:00 .dockerenv
-drwxr-xr-x   2 0 0 4096 Mar 13 11:41 bin
-drwxr-xr-x   5 0 0  360 Mar 14 22:00 dev
-drwxr-xr-x   2 0 0 4096 Mar 14 22:00 etc
-drwxr-xr-x   3 0 0 4096 Mar 13 11:40 lib
-drwxr-xr-x   2 0 0 4096 Mar 13 11:40 lib64
-dr-xr-xr-x 136 0 0    0 Mar 14 22:00 proc
-dr-xr-xr-x  13 0 0    0 Mar 12 15:01 sys
-drwxr-xr-x   3 0 0 4096 Mar 13 11:41 usr
+bash-5.2# ls -la
+total 24
+drwxr-xr-x   1 0 0 4096 Oct 14 16:50 .
+drwxr-xr-x   1 0 0 4096 Oct 14 16:50 ..
+-rwxr-xr-x   1 0 0    0 Oct 14 16:50 .dockerenv
+drwxrwxr-x   2 1000 1000 4096 Oct 14 16:50 bin
+drwxr-xr-x   5 0 0  340 Oct 14 16:50 dev
+drwxr-xr-x   2 0 0 4096 Oct 14 16:50 etc
+drwxrwxr-x   3 1000 1000 4096 Oct 14 16:50 lib
+dr-xr-xr-x 114 0 0    0 Oct 14 16:50 proc
+dr-xr-xr-x  13 0 0    0 Oct 14 16:50 sys
+drwxrwxr-x   3 1000 1000 4096 Oct 14 16:50 usr
 
-bash-4.3# ps -efa
+bash-5.2# ps -efa
 UID        PID  PPID  C STIME TTY          TIME CMD
-0            1     0  0 22:00 ?        00:00:00 /bin/bash
-0            6     1  0 22:00 ?        00:00:00 ps -efa
+0            1     0  0 16:50 ?        00:00:00 /bin/bash
+0            7     1  0 16:50 ?        00:00:00 ps -efa
 
-bash-4.3# mount
-none on / type aufs (rw,relatime,si=59999008a60a5cf5,dio,dirperm1)
+bash-5.2# mount
+overlay on / type overlay (rw,relatime,lowerdir=...,upperdir=...,workdir=...)
 proc on /proc type proc (rw,nosuid,nodev,noexec,relatime)
-tmpfs on /dev type tmpfs (rw,nosuid,mode=755)
+tmpfs on /dev type tmpfs (rw,nosuid,size=65536k,mode=755,inode64)
 ...
-tmpfs on /sys/firmware type tmpfs (ro,relatime)
+cgroup on /sys/fs/cgroup type cgroup2 (ro,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot)
+tmpfs on /sys/firmware type tmpfs (ro,relatime,inode64)
 
-bash-4.3# ls -la /etc
+bash-5.2# ls -la /etc
 total 20
-drwxr-xr-x  2 0 0 4096 Mar 14 22:00 .
-drwxr-xr-x 14 0 0 4096 Mar 14 22:00 ..
--rw-r--r--  1 0 0   13 Mar 14 22:00 hostname
--rw-r--r--  1 0 0  174 Mar 14 22:00 hosts
-lrwxrwxrwx  1 0 0   12 Mar 14 22:00 mtab -> /proc/mounts
--rw-r--r--  1 0 0  191 Mar 14 22:00 resolv.conf
+drwxr-xr-x  2 0 0 4096 Oct 14 16:50 .
+drwxr-xr-x  1 0 0 4096 Oct 14 16:50 ..
+-rw-r--r--  1 0 0   13 Oct 14 16:50 hostname
+-rw-r--r--  1 0 0  174 Oct 14 16:50 hosts
+lrwxrwxrwx  1 0 0   12 Oct 14 16:50 mtab -> /proc/mounts
+-rw-r--r--  1 0 0  269 Oct 14 16:50 resolv.conf
 
-bash-4.3# cat >I-was-here
+bash-5.2# cat >I-was-here
 covfefe
 <ctrl-d>
 
-bash-4.3# cat /proc/self/cgroup
-11:blkio:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
-10:memory:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
-9:perf_event:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
-8:freezer:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
-7:hugetlb:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
-6:pids:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
-5:net_cls,net_prio:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
-4:cpu,cpuacct:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
-3:cpuset:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
-2:devices:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
-1:name=systemd:/docker/300a44334bca84724e1a549c0942ee76549f258258b468d896532fefb042592d
+bash-5.2# cat /proc/self/cgroup
+0::/
 
-bash-4.3# exit
+bash-5.2# exit
 exit
 ```
+Two details changed from older Docker/cgroup-v1 documentation: the root filesystem is `overlay` (the `overlay2` storage driver; you can see the merged `lowerdir`/`upperdir`/`workdir` in the mount table), not `aufs`. And `/proc/self/cgroup` is now a **single** cgroup v2 line (`0::/`) instead of eleven controller-specific lines — Docker places the container in a dedicated cgroup in the unified hierarchy (e.g. `/system.slice/docker-<id>.scope`) and, by default, masquerades the path as the root `/` from inside.
 The various competing ways of bootstrapping the container process is today standardized under the [Open Container Initiative (OCI)](https://www.opencontainers.org/), and Docker has donated its container format and runtime implementation [runC]( https://github.com/opencontainers/runc) to the OCI.
 
 In order to find out, if your code is running inside a docker environment, you can [check](https://github.com/minio/minio/pull/1330) for `/.dockerenv`:
@@ -100,8 +91,8 @@ fi
 Docker has its own `ps` facility. It can not only list running docker container, but also containers which were run in the past. Furthermore, the last state (write layer) of a container is retained and can be inspected:
 ```
 # docker ps -a
-CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                     PORTS               NAMES
-e8c4dbbede0c        container:1.0       "/bin/bash"         45 seconds ago      Exited (0) 5 seconds ago                       vibrant_chandrasekhar
+CONTAINER ID   IMAGE          COMMAND         CREATED          STATUS                     PORTS     NAMES
+634877128d15   container:1.0   "/bin/bash"    45 seconds ago   Exited (0) 5 seconds ago             vibrant_chandrasekhar
 ```
 Unless you name a runtime instance, docker will auto-generate a [human readable name](https://github.com/moby/moby/blob/master/pkg/namesgenerator/names-generator.go) (which can be hilarious if the workload coincidentally correlates).
 
@@ -124,10 +115,11 @@ covfefe
 Hav a look at the docker system facility to keep the docker runtime in check:
 ```
 # docker system df
-TYPE                TOTAL               ACTIVE              SIZE                RECLAIMABLE
-Images              5                   2                   216.4 MB            208.5 MB (96%)
-Containers          5                   0                   110 B               110 B (100%)
-Local Volumes       0                   0                   0 B                 0 B
+TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+Images          1         1         8.555MB   0B (0%)
+Containers      4         0         0B        0B
+Local Volumes   0         0         0B        0B
+Build Cache     0         0         0B        0B
 
 # docker system prune
 WARNING! This will remove:

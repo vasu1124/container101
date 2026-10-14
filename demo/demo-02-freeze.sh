@@ -24,18 +24,44 @@ dir="${0%/*}"
 DEMO_PROMPT="${GREEN}➜ ${CYAN}# "
 
 # hide the evidence
-rmdir /sys/fs/cgroup/freezer/test
+# cleanup a possibly previous run: move processes out & remove the cgroup
+if [ -d /sys/fs/cgroup/test ]; then
+  cat /sys/fs/cgroup/test/cgroup.procs 2>/dev/null | while read -r pid; do
+    echo "$pid" > /sys/fs/cgroup/cgroup.procs 2>/dev/null
+  done
+  rmdir /sys/fs/cgroup/test 2>/dev/null
+fi
 clear
 
-pe "ls -la /sys/fs/cgroup"
-pe "cd /sys/fs/cgroup/freezer"
-pe "ls -la"
-pe "mkdir test"
-pe "cd test"
-pe "ls -la"
-pe "cat tasks"
+# NOTE: run this demo as ROOT (sudo ./demo-02-freeze.sh).
+# In parallel, have an `unshare --map-root-user --user` shell running
+# and note its PID (see demo-02-unshare.sh); you will be asked for it.
+
+pe "stat -fc %T /sys/fs/cgroup        # cgroup2fs => we are on v2"
+pe "ls /sys/fs/cgroup"
+pe "cat /sys/fs/cgroup/cgroup.controllers"
+pe "mkdir /sys/fs/cgroup/test"
+pe "cd /sys/fs/cgroup/test"
+pe "ls"
+# prepare: ask for the unshare-shell pid and move it into the cgroup
+p "echo <pid-of-your-unshared-shell> > cgroup.procs"
+clear
 cmd
-pe "cat tasks"
-pe "echo FROZEN >freezer.state"
-pe "echo THAWED >freezer.state"
+pe "cat cgroup.procs"
+pe "cat cgroup.events"
+# freeze
+pe "echo 1 > cgroup.freeze"
+pe "cat cgroup.events"
+p "# go type in your frozen shell... it is unresponsive"
+wait
+# thaw
+pe "echo 0 > cgroup.freeze"
+p "# the shell digests everything you typed"
+wait
+
+# cleanup
+pe "cat cgroup.procs"
+p "# exit the contained shell before removing the cgroup"
+pe "cd /sys/fs/cgroup"
+pe "rmdir test"
 wait

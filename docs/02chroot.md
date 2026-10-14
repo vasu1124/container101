@@ -30,32 +30,30 @@ cp /bin/bash ./bin
 That is not enough, because `bash` depends on some libraries which also need to be copied into our container directory since we need to be fully self sufficient. You can inspect the binary with `ldd` (read the manpage, `objdump`is a safer option):
 ```
 ldd /bin/bash
-	linux-vdso.so.1 =>  (0x00007fff57bc6000)
-	libtinfo.so.5 => /lib/x86_64-linux-gnu/libtinfo.so.5 (0x00007f210544f000)
-	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f210524b000)
-	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f2104e81000)
-	/lib64/ld-linux-x86-64.so.2 (0x00007f2105678000)
+	linux-vdso.so.1 (0x0000ffff9fbec000)
+	libtinfo.so.6 => /lib/aarch64-linux-gnu/libtinfo.so.6 (0x0000ffff9f9e0000)
+	libc.so.6 => /lib/aarch64-linux-gnu/libc.so.6 (0x0000ffff9f820000)
+	/lib/ld-linux-aarch64.so.1 (0x0000ffff9fbb0000)
 ```
+>Architecture note: the output above is from the ARM64 (`aarch64`) VM. On x86-64 you'd see `lib/x86_64-linux-gnu/...` and `/lib64/ld-linux-x86-64.so.2`. The same concepts apply; only the paths differ. Modern Debian/Ubuntu use the [merged-usr](https://wiki.debian.org/UsrMerge) layout, so the dynamic loader lives under `/lib/...`.
 `ldd` lists all the required libs and where to find them. The `linux-vdso.so.1` is a "vDSO" (virtual dynamic shared object), that is a small shared library that the kernel automatically maps into the address space of all user-space applications. So we can skip that library. Some lines point directly to the library used, others have a `=>` followed by an absolute path to the library; the hex number is the address where the library will be loaded.
 
 More convinient is the `lddtree` tool, which also inspects recursive dependancies of libraries and prints a flat list:
 ```
 lddtree -l /bin/bash
-  /bin/bash
-  /lib64/ld-linux-x86-64.so.2
-  /lib/x86_64-linux-gnu/libtinfo.so.5
-  /lib/x86_64-linux-gnu/libdl.so.2
-  /lib/x86_64-linux-gnu/libc.so.6
+/bin/bash
+/lib/ld-linux-aarch64.so.1
+/lib/aarch64-linux-gnu/libtinfo.so.6
+/lib/aarch64-linux-gnu/libc.so.6
 ```
 
 The helper script `copywithlib.sh` helps to copy a binary with all dependancies from the root environment into a folder:
 ```
 copywithlib.sh /bin/bash .
 '/bin/bash' -> './bin/bash'
-'/lib64/ld-linux-x86-64.so.2' -> './lib64/ld-linux-x86-64.so.2'
-'/lib/x86_64-linux-gnu/libtinfo.so.5' -> './lib/x86_64-linux-gnu/libtinfo.so.5'
-'/lib/x86_64-linux-gnu/libdl.so.2' -> './lib/x86_64-linux-gnu/libdl.so.2'
-'/lib/x86_64-linux-gnu/libc.so.6' -> './lib/x86_64-linux-gnu/libc.so.6'
+'/lib/ld-linux-aarch64.so.1' -> './lib/ld-linux-aarch64.so.1'
+'/lib/aarch64-linux-gnu/libtinfo.so.6' -> './lib/aarch64-linux-gnu/libtinfo.so.6'
+'/lib/aarch64-linux-gnu/libc.so.6' -> './lib/aarch64-linux-gnu/libc.so.6'
 ```
 
 Let us copy a couple of nice to have binaries:
