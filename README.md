@@ -1,43 +1,105 @@
 # Container 101
 
+[![Docker](https://img.shields.io/badge/docker-26+-blue?logo=docker&logoColor=white)](https://www.docker.com)
+[![Platform](https://img.shields.io/badge/platform-Linux%20ARM64%20%7C%20x86--64-green)](https://vagrantup.com)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Chapters](https://img.shields.io/badge/chapters-09-orange)](docs/01setup.md)
 
-If you ever had to deal with repairing or modifying an installed Linux system (reset root password, resizing/checking partitions or file systems), you should be familiar with the concept of booting a live cd image and `chroot`-ing to the installed system.
+> A hands-on, ground-up introduction to Linux containers — no magic, just Linux.
 
-As more features around cgroups & namespaces where [introduced](https://www.youtube.com/watch?v=YsYzMPptB-k) to Linux, I just experimented with these new features via [LXC](https://linuxcontainers.org/) only for special purposes, while still relying on virtual machines for my daily work. The google project [LMCTFY](https://www.linuxplumbersconf.org/2013/ocw//system/presentations/1239/original/lmctfy%20(1).pdf) was a first wakeup call for me to pay closer [attention](https://www.youtube.com/watch?v=doUktZIcXF0). I was reminded again of a [course in Plan 9](http://www.vorlesungen.uni-osnabrueck.de/informatik/Plan9/), where many of the concepts had been imho already introduced:
+Ever repaired a Linux system by booting a live CD and `chroot`-ing into it? Then you already understand the *soul* of containerization. This tutorial takes you from that mental model all the way to building, distributing, and securing OCI images.
 
->Design Principles derived from [Plan 9 from Bell Labs](https://en.wikipedia.org/wiki/Plan_9_from_Bell_Labs):
->
->The foundations of the system are built on two ideas: a per-process name space and a simple message-oriented file system protocol.
->— Pike et al.
-> * Processes each have their own isolated view of the namespace (cf. [Linux mount, pid, net, ..., cgroups](https://en.wikipedia.org/wiki/Linux_namespaces)).
-> * Processes can offer their services to other processes by providing virtual files that appear in the other processes' namespace, across the boundary of a single computer.
-> * Processes can collect the files from different directory trees in a single union directory (cf. [Docker AUFS, device mapper, lvm, brtfs/zfs](https://docs.docker.com/storage/storagedriver/select-storage-driver/)).
-> * ... combination of many other innovations (cf. Linux special filesystems like /proc or /sys, everything unicode).
+---
 
-I put together the following introduction to containers with the goal to jump start a newcomer into this subject with some very easy to understand exercises. And I have inserted links to many superb experts & bloggers and original documentation, so you can dive deeper into further material.
+## 🎯 What You'll Learn
 
-## Exercises
+By the end of this course you will understand, *hands-on*:
 
-### [01 Setup](docs/01setup.md)
+1. **The anatomy** of a Linux container (namespaces, cgroups, chroot)
+2. **How to build** a minimal container image from scratch
+3. **How to publish** and consume images from a public registry
+4. **Alternative runtimes** beyond Docker (systemd-nspawn)
+5. **Security primitives** (capabilities, seccomp, syscall tracing)
+6. **How to debug** containers at the syscall level
 
-### [02 Play with chroot](docs/02chroot.md)
+Everything is exercised *in a real VM*, not just read about.
 
-### [03 Play with cgroups & namespaces](docs/03cgroups.md)
+---
 
-### [04 Play with cgroups & namespaces (Part 2)](docs/04cgroups.md)
+## 🚀 Quickstart
 
-### [05 Let's create a Docker image and run it](docs/05docker.md)
+You need [Vagrant](https://www.vagrantup.com) and a provider (VirtualBox or UTM/QEMU for Apple Silicon).
 
-### [06 Swarm Intelligence with Docker Registry](docs/06registry.md)
+```bash
+git clone <this repo>
+cd container101
+vagrant up     # provisions Debian 13 ARM64 + docker + tools
+vagrant ssh
+```
 
-### [07 What about systemd-nspawn?](docs/07nspawn.md)
+Inside the box:
+```bash
+sudo su -              # most chapters assume root
+cd /home/vagrant/container101
+make                   # builds the sample helloworld binary
+```
 
-### [08 Tuning of Permissions & Security](docs/08security.md)
+---
 
-### [09 Inspect and Restrict Syscalls](docs/09syscalls.md)
+## 📚 Chapters
 
-## Further Reading
-- [A Brief History of Containers: From the 1970s Till Now](https://blog.aquasec.com/a-brief-history-of-containers-from-1970s-chroot-to-docker-2016). And if you are interested in real containers, [the history of containers](https://mccontainers.com/blog/the-history-of-containers/) has some good material 
-- [A Practical Introduction to Container Terminology](https://developers.redhat.com/blog/2018/02/22/container-terminology-practical-introduction/) by Scott McCarty
-- [Docker Labs](https://github.com/docker/labs/blob/master/README.md) (docker specific)
-- [The Missing Introduction To Containerization](https://medium.com/devopslinks/the-missing-introduction-to-containerization-de1fbb73efc5) by Aymen El Amri, a very nice in-depth article on the history with examples.
+Each chapter is a self-contained lesson: explanation → verified exercise → deeper links.
+
+| # | Chapter | Focus |
+|---|---------|-------|
+| 01 | [Setup](docs/01setup.md) | Prepare the environment |
+| 02 | [Play with chroot](docs/02chroot.md) | The first isolation primitive |
+| 03 | [Control Groups (cgroups)](docs/03cgroups.md) | Freeze, kill, monitor processes |
+| 04 | [Namespaces](docs/04cgroups.md) | PID, mount, network isolation |
+| 05 | [Docker Images](docs/05docker.md) | Build, run, and manage containers |
+| 06 | [Container Registries](docs/06registry.md) | Push/pull from Docker Hub |
+| 07 | [systemd-nspawn](docs/07nspawn.md) | The systemd-native runtime |
+| 08 | [Capabilities & Permissions](docs/08security.md) | Fine-grained privilege control |
+| 09 | [Syscalls & seccomp](docs/09syscalls.md) | Trace and restrict kernel interface |
+
+---
+
+## 🧭 Pedagogy
+
+The chapters build upward in abstraction, but each is understandable on its own.
+
+```mermaid
+graph TD
+  A[chroot] --> B[namespaces / cgroups]
+  B --> C[Docker image]
+  C --> D[Container Registry]
+  D --> E[systemd-nspawn]
+  E --> F[Capabilities]
+  F --> G[seccomp / syscalls]
+```
+
+We start where containers *come from* (Plan 9 namespaces, chroot), because if you skip this you never truly understand Docker. Then we walk you up the stack to modern primitives.
+
+---
+
+## 📖 Further Reading
+
+- Deep intro to container concepts: [A Brief History of Containers](https://blog.aquasec.com/a-brief-history-of-containers-from-1970s-chroot-to-docker-2016)
+- Terminology: [A Practical Introduction to Container Terminology](https://developers.redhat.com/blog/2018/02/22/container-terminology-practical-introduction/)
+- Hands-on with OCI runtimes: [Docker Labs](https://github.com/docker/labs)
+- The bigger picture: [The Missing Introduction To Containerization](https://medium.com/devopslinks/the-missing-introduction-to-containerization-de1fbb73efc5)
+
+---
+
+## 💡 Tips
+
+- All exercises are designed to be run **on a Linux host or VM** with Docker. We test on **Debian 13 (trixie) ARM64**.
+- Some examples document different behavior between ARM64 and x86-64 — that's the point; container syscall layers differ per architecture.
+- If a command fails in your version of Docker, check the chapter's note on *platform differences* — many behaviors changed between Docker 1.x and 26+.
+- Want to discuss? Open an issue!
+
+---
+
+## 📝 License
+
+MIT — see LICENSE.

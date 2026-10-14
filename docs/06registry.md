@@ -1,58 +1,89 @@
-# 06 Swarm Intelligence with Container Registries
+# 06 · Container Registries
 
-Obtain a free account at your favorite hosted Container Registry, [Docker Hub](https://hub.docker.com/), [Quay](https://quay.io/) or others. In the following examples, we will be using the most popular registry Docker Hub, which is the default with the docker cli & runtime. For an overview and comparison of public/hosted/private/on-premise registry options check [link 1](http://rancher.com/container-registries-might-missed/) and [link 2](http://blog.wercker.com/ultimate-guide-to-container-registries)
+> **Goal**: Push your image to a public registry. Pull someone else's. Understand how a global container ecosystem actually works.
 
-### Exercise
+Obtain a free account at your favorite hosted Container Registry; the most common ones are [Docker Hub](https://hub.docker.com/), [Quay](https://quay.io/), or a private [GitHub Container Registry](https://ghcr.io). In this tutorial we use Docker Hub because it's the default registry for the Docker CLI.
 
-We will upload/push our container image into a public repository. First, we login to the registry; this is only required once, the docker cli saves your authorization credentials under `~/.docker/config.json`. Next, we tag the image with a url tag `docker.io/vasu1124/container:1.0` or for Docker Hub in short `vasu1124/container:1.0`; for other registries you have to use an absolute url. Lastly, if everything works, the image is pushed.
-```
-# docker tag container:1.0 vasu1124/container:1.0
-# docker login
-Login with your Docker ID to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com to create one.
+---
+
+## Exercise — push your image to Docker Hub
+
+Before pushing, we need two things: authentication, and a **tag** that tells Hub under which repository name to store the image.
+
+```bash
+cd /home/vagrant/container101/container
+
+# 1. Tag with your Docker ID (mine is vasu1124)
+docker tag container:1.0 vasu1124/container:1.0
+
+# 2. Log in (one time only, credentials are cached in ~/.docker/config.json)
+docker login
+Login with your Docker ID to push and pull images from Docker Hub. 
 Username: vasu1124
 Password: <password>
 Login Succeeded
 
-# docker push vasu1124/container:1.0
-The push refers to a repository [docker.io/vasu1124/container]
+# 3. Push
+docker push vasu1124/container:1.0
+The push refers to repository [docker.io/vasu1124/container]
 5b73e1d6f17e: Pushed
 1.0: digest: sha256:c668d2784a267f29ee6c397537c48454c3dba829da2f513b37a5fafd16975fac size: 527
 ```
 
-If you now open the Browser to https://hub.docker.com/r/vasu1124/container/tags/, you will find our container image publicly accessible.
+If you now browse to `https://hub.docker.com/r/vasu1124/container/tags/`, you will see your image publicly accessible.
+
 ![repo](container.png)
 
-How about logging into a fresh system with docker installed and running `docker run -it vasu1124/container:1.0 /bin/bash`? If you do, you have just experienced the container benefits of standardized packaging & distribution. No need for complex installations & scripting.
+Now try it in reverse — from a *fresh* machine with Docker installed:
 
-The container image can now be used and/or extended by a community of users for which this image might be of interest. Beware that you are responsible for [ensuring copyrights, licenses and export controls](https://www.docker.com/docker-terms-service) are observed. All registry services offer multiple advanced, mostly paid features, ranging from integrating source to image CI/CD build pipelines to security & vulnerability scanners (see the Ubuntu [example](https://hub.docker.com/r/library/ubuntu/tags/latest/)).
-
-It is now time to tap into the collective contributions of a decentralized, self-organized community and search for an image you can directly use (instead of building it from scratch). [Alpine Linux](https://alpinelinux.org/) is the de-facto standard for a minimal container base image: security-oriented, musl libc + busybox, and only **5 MB**:
+```bash
+docker run -it vasu1124/container:1.0 /bin/bash
 ```
-# docker search --no-trunc alpine
+
+If that works, you've just experienced the whole value proposition: **standardized packaging + standardized distribution**. No more "works on my machine".
+
+---
+
+## Understanding what just happened
+
+- The registry stores **layers** identified by sha256. When you push, it uploads the diff between local and remote.
+- The **tag** (`vasu1124/container:1.0`) is just a human label pointing at a digest.
+- Anyone can pull it — but each puller gets the same bits, no rebuild required.
+
+Container registries are a core piece of the container ecosystem; they are also mostly free up to a limit. Useful registries:
+
+- **Docker Hub** (default) — largest public registry
+- **Quay.io** — operated by Red Hat
+- **GitHub Container Registry (ghcr.io)** — free for public repos
+- **AWS ECR / Google GCR / Azure ACR** — cloud-native, integrated with IAM
+- **Harbor / Artifactory** — self-hosted
+
+---
+
+## Pull a popular community image
+
+Let's search for a small, well-maintained base image. **`Alpine`** is today's choice for minimal containers (only 5 MB!):
+
+```bash
+docker search --no-trunc alpine
 NAME                DESCRIPTION                                                                                         STARS     OFFICIAL
 alpine              A minimal Docker image based on Alpine Linux with a complete package index and only 5 MB in size!   11563     [OK]
 alpine/git          A  simple git container running in alpine linux, especially for tiny linux distro.                  252
 alpine/socat        Run socat command in alpine container                                                               120
 alpine/curl                                                                                                             14
 ```
-You can now choose from various options. Docker Hub offers some KPIs, such as how many "Stars" has the image obtained from the users, is it an "official" build from docker, or is an "automated" build process attached.
 
-First, let us inspect the host system:
-```
-# cat /etc/os-release
-PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
-NAME="Debian GNU/Linux"
-VERSION_ID="13"
-...
+The `alpine` line has 11.5k stars and is an **official** Docker image. That means it's maintained and reviewed.
 
-# uname -a
-Linux container101 6.12.107+deb13-arm64 #1 SMP Debian 6.12.107-1 (2026-08-29) aarch64 GNU/Linux
-```
-So this is a Debian with an Debian kernel (and on ARM64).
+> Docker Hub shows a couple of KPIs: stars (popularity), official-image flag, automated-build flag.
 
-Now, let us download, run and inspect the official `alpine:latest` image:
-```
-# docker run -it alpine:latest /bin/sh
+---
+
+## Pull and inspect Alpine
+
+```bash
+docker run -it alpine:latest /bin/sh
+
 Unable to find image 'alpine:latest' locally
 latest: Pulling from library/alpine
 a9986cd6f37d: Pull complete
@@ -77,20 +108,62 @@ Linux 9977cc543267 6.12.107+deb13-arm64 #1 SMP Debian 6.12.107-1 (2026-08-29) aa
 
 / # exit
 ```
-Woa. Inside the container, it feels like a wholehearted Alpine. But the kernel is an Debian? ... Get used to it. This is the new world of containers, your musl-based image might run on a glibc-tuned host and vice versa, your support matrix just got hyperboled :-)
 
-### Export
+**Wait.** `uname -a` inside the container says *Debian 6.12.107+deb13-arm64* — but the host is Debian 13. The kernel is shared — containers **do not have their own kernel**. That's the whole point of containers.
 
-Where you can import, you can also export (need to keep the trade balance in check):
+Compare with the host:
+
+```bash
+cat /etc/os-release              # on the host
+PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
+NAME="Debian GNU/Linux"
+VERSION_ID="13"
+...
 ```
-# mkdir alpine
-# cd alpine; docker export <container-id> | tar xf -
+
+So a musl-libc-based Alpine userland runs on top of a Debian (glibc-tuned) kernel. This is normal in container-land — containers package *userspace*, not *kernel*.
+
+---
+
+## Export
+
+You can also go in the reverse direction and export a container root filesystem to a tarball:
+
+```bash
+mkdir alpine-export && cd alpine-export
+
+# (Assuming the alpine container you ran above is still alive; `docker ps -a` to find ID)
+docker export <container-id> | tar xf - 
 ```
-Your local folder `~/alpine` now includes a complete Alpine v3.24 root filesystem. If you [figure out](https://github.com/linuxkit/linuxkit) where to get kernel & initrd from and how to appropriately boot into that system, you have an installer for an Operating System.
 
-### Curated images from Docker
-Checkout https://hub.docker.com/explore/ and more recently https://store.docker.com/ for curated and well maintained Docker images with many open source and commercial software products.
+Your `alpine-export/` directory now contains a complete Alpine v3.24 root filesystem. If you figure out how to get a kernel and initrd to boot from (see https://github.com/linuxkit/linuxkit), this becomes the installer for an operating system.
 
-Lastly, there are two CNCF incubating projects dealing with managing cryptographic based trust and integrity of image & contents:
-[The Update Framework (TUF)](https://github.com/theupdateframework/specification) and
-[Notary](https://github.com/theupdateframework/notary).
+---
+
+## Curated images from Docker
+
+For production use, prefer verified images:
+
+- https://hub.docker.com/explore/ — community picks
+- https://store.docker.com/ — verified publisher program
+
+Many vendors publish official images (Ubuntu, Postgres, Nginx, ...). They are maintained, signed, and often scanned for known vulnerabilities.
+
+---
+
+## Trust
+
+There are two CNCF projects managing cryptographic trust for images & contents:
+
+- [The Update Framework (TUF)](https://github.com/theupdateframework/specification) — incremental, rollback-resistant updates
+- [Notary](https://github.com/theupdateframework/notary) — signing and verification of software artifacts
+
+If you want to stop using "whatever image is on Hub", TUF/Notary-based signing is the standard.
+
+---
+
+## Next →
+
+In [chapter 07](07nspawn.md), we look at an alternative container runtime — one built directly on top of systemd.
+
+[Back to top](../README.md)

@@ -1,164 +1,176 @@
-# 02 Play with chroot
+# 02 · Play with chroot
 
-From Wikipedia:
-The chroot system call was introduced during development of Version 7 Unix in 1979, in order to test its installation and build system.
+> **Goal**: Understand the oldest isolation primitive on Unix — `chroot` — and why it alone is *not* a container.
 
-For a chrooted program to successfully start, the chroot directory must be populated with a minimum set of these files.
+The [`chroot()`](https://man7.org/linux/man-pages/man2/chroot.2.html) system call was introduced in Version 7 Unix (1979) to test the OS installation. The idea: run a process that believes the root directory (`/`) is some subdirectory. Everything outside that directory is invisible to the process.
 
-This can make chroot difficult to use as a general sandboxing mechanism.
+It sounds like a container. It isn't — but it's the *gateway*.
 
->**Name**
->
->  chroot - run command or interactive shell with special root directory
->
-> **Synopsis**
->
->  chroot [OPTION] NEWROOT [COMMAND [ARG]...]
->
->**Description**
->
-> Run COMMAND with root directory set to NEWROOT.
+---
 
-### Exercise
+## What chroot actually needs
 
-Let's create a fresh container directory and fill it with some binaries (e.g. typical shell tools) and in the end call chroot on it:
+For a chrooted program to start, its new root must contain a minimal userland:
+
+- The **binary** (e.g., `/bin/bash`)
+- Its **shared libraries** (glibc, ld-linux)
+- The **dynamic loader** itself
+
+Let's see what we need for bash.
+
+### Inspect the dependencies
+
+```bash
+# ldd prints the libraries a binary needs
+$ ldd /bin/bash
+    linux-vdso.so.1 (0x0000ffff9fbec000)
+    libtinfo.so.6 => /lib/aarch64-linux-gnu/libtinfo.so.6 (0x0000ffff9f9e0000)
+    libc.so.6 => /lib/aarch64-linux-gnu/libc.so.6 (0x0000ffff9f820000)
+    /lib/ld-linux-aarch64.so.1 (0x0000ffff9fbb0000)
 ```
-mkdir -p container/bin
-cd container
-cp /bin/bash ./bin
-```
-That is not enough, because `bash` depends on some libraries which also need to be copied into our container directory since we need to be fully self sufficient. You can inspect the binary with `ldd` (read the manpage, `objdump`is a safer option):
-```
-ldd /bin/bash
-	linux-vdso.so.1 (0x0000ffff9fbec000)
-	libtinfo.so.6 => /lib/aarch64-linux-gnu/libtinfo.so.6 (0x0000ffff9f9e0000)
-	libc.so.6 => /lib/aarch64-linux-gnu/libc.so.6 (0x0000ffff9f820000)
-	/lib/ld-linux-aarch64.so.1 (0x0000ffff9fbb0000)
-```
->Architecture note: the output above is from the ARM64 (`aarch64`) VM. On x86-64 you'd see `lib/x86_64-linux-gnu/...` and `/lib64/ld-linux-x86-64.so.2`. The same concepts apply; only the paths differ. Modern Debian/Ubuntu use the [merged-usr](https://wiki.debian.org/UsrMerge) layout, so the dynamic loader lives under `/lib/...`.
-`ldd` lists all the required libs and where to find them. The `linux-vdso.so.1` is a "vDSO" (virtual dynamic shared object), that is a small shared library that the kernel automatically maps into the address space of all user-space applications. So we can skip that library. Some lines point directly to the library used, others have a `=>` followed by an absolute path to the library; the hex number is the address where the library will be loaded.
 
-More convinient is the `lddtree` tool, which also inspects recursive dependancies of libraries and prints a flat list:
-```
-lddtree -l /bin/bash
+> **Architecture note**: This is ARM64 (`aarch64`) output. On x86-64 the paths are `/lib/x86_64-linux-gnu/...` and the loader is `/lib64/ld-linux-x86-64.so.2`. Same concept, different filenames.
+
+`linux-vdso.so.1` is a virtual kernel mapping — no file to copy. The others must physically exist inside the chroot.
+
+A nicer way to see the tree with recursive dependencies:
+
+```bash
+$ lddtree -l /bin/bash
 /bin/bash
 /lib/ld-linux-aarch64.so.1
 /lib/aarch64-linux-gnu/libtinfo.so.6
 /lib/aarch64-linux-gnu/libc.so.6
 ```
 
-The helper script `copywithlib.sh` helps to copy a binary with all dependancies from the root environment into a folder:
-```
-copywithlib.sh /bin/bash .
-'/bin/bash' -> './bin/bash'
-'/lib/ld-linux-aarch64.so.1' -> './lib/ld-linux-aarch64.so.1'
-'/lib/aarch64-linux-gnu/libtinfo.so.6' -> './lib/aarch64-linux-gnu/libtinfo.so.6'
-'/lib/aarch64-linux-gnu/libc.so.6' -> './lib/aarch64-linux-gnu/libc.so.6'
+### Obtain and place the binaries
+
+Manual copying gets tedious. The helper script `demo/copywithlib.sh` automates it:
+
+```bash
+cd /home/vagrant/container101
+mkdir container && cd container
+
+bash ../demo/copywithlib.sh /bin/bash .
+# -> '/bin/bash' -> './bin/bash'
+# -> '/lib/ld-linux-aarch64.so.1' -> './lib/ld-linux-aarch64.so.1'
+# -> '/lib/aarch64-linux-gnu/libtinfo.so.6' -> './lib/aarch64-linux-gnu/libtinfo.so.6'
+# -> '/lib/aarch64-linux-gnu/libc.so.6' -> './lib/aarch64-linux-gnu/libc.so.6'
 ```
 
-Let us copy a couple of nice to have binaries:
-```
-copywithlib.sh /bin/ls
-copywithlib.sh /bin/mkdir
-copywithlib.sh /bin/ps
-copywithlib.sh /bin/mount
-copywithlib.sh /bin/cat
-copywithlib.sh /bin/pwd
-copywithlib.sh /bin/hostname
-copywithlib.sh /usr/bin/stress
+Grab a few more utilities (each with their deps):
+
+```bash
+for b in /bin/ls /bin/mkdir /bin/ps /bin/mount /bin/cat /bin/pwd /bin/hostname /usr/bin/stress; do
+  bash ../demo/copywithlib.sh $b .
+done
 ```
 
-Now we are set, the container folder contains a small container-environment with a couple of binaries and their libraries. Switch into the container folder with `chroot` and look around:
-```
-chroot .
+---
 
-bash-4.3# pwd
+## Exercise 1 — Enter the chroot
+
+```bash
+$ chroot .
+
+bash-5.2# pwd
 /
 
-bash-4.3# ls -la
+bash-5.2# ls -la
 total 24
-drwxr-xr-x 6 0 0 4096 Mar 13 11:41 .
-drwxr-xr-x 6 0 0 4096 Mar 13 11:41 ..
-drwxr-xr-x 2 0 0 4096 Mar 13 11:41 bin
-drwxr-xr-x 3 0 0 4096 Mar 13 11:40 lib
-drwxr-xr-x 2 0 0 4096 Mar 13 11:40 lib64
-drwxr-xr-x 3 0 0 4096 Mar 13 11:41 usr
+drwxr-xr-x 6 0 0 4096 Nov  1 12:34 .
+drwxr-xr-x 6 0 0 4096 Nov  1 12:34 ..
+drwxr-xr-x 2 0 0 4096 Nov  1 12:34 bin
+drwxr-xr-x 3 0 0 4096 Nov  1 12:34 lib
+drwxr-xr-x 2 0 0 4096 Nov  1 12:34 lib64
+drwxr-xr-x 3 0 0 4096 Nov  1 12:34 usr
 
-bash-4.3# ps
+bash-5.2# ps
 Error, do this: mount -t proc proc /proc
+```
 
-bash-4.3# mkdir /proc
-bash-4.3# mount -t proc proc /proc
+Notice: `ps` fails immediately because there is no `/proc` inside the chroot. This is your **first lesson**: a container with an incomplete filesystem is still broken. Let's fix it:
 
-bash-4.3# ps -efa
+```bash
+bash-5.2# mkdir /proc
+bash-5.2# mount -t proc proc /proc
+
+bash-5.2# ps -efa
 UID        PID  PPID  C STIME TTY          TIME CMD
-0            1     0  0 03:34 ?        00:00:35 /sbin/init
-0            2     0  0 03:34 ?        00:00:00 [kthreadd]
+root         1     0  0 03:34 ?        00:00:35 /sbin/init
+root         2     0  0 03:34 ?        00:00:00 [kthreadd]
 ...
-1000      9351  8327  0 11:04 ?        00:00:08 htop
-0         9356     2  0 11:04 ?        00:00:00 [kworker/u4:2]
-0        10863  3786  0 12:01 ?        00:00:00 /bin/bash -i
-0        10870 10863  0 12:02 ?        00:00:00 ps -efa
+vagrant   9351  8327  0 11:04 ?        00:00:08 htop
+root      9356     2  0 11:04 ?        00:00:00 [kworker/u4:2]
+root     10863  3786  0 12:01 ?        00:00:00 /bin/bash -i
+root     10870 10863  0 12:02 ?        00:00:00 ps -efa
 
-bash-4.3# echo $$
+bash-5.2# echo $$
 10863
 
-bash-4.3# exit
-exit
+bash-5.2# exit
 ```
 
-`chroot` only "mapped" your container filesystem to the root level "/". All other namespaces were not mapped. Therefore, once you mounted `/proc`, the `ps` tools was able to look into all running processes. Furthermore, our container was not isolated at all, changes in the container were reflected in the inherited root environment and have to be cleaned:
-```
-# mount | grep "/proc"
+You can see the **entire host's process list** — `chroot` only remapped the filesystem *view*, not the process tree or PIDs. There **was no isolation**.
+
+### Clean up
+
+The proc mount sticks outside the chroot. On the host:
+
+```bash
+$ mount | grep "/proc"
 proc on /proc type proc (rw,nosuid,nodev,noexec,relatime)
 proc on /home/vagrant/container/proc type proc (rw,relatime)
-# umount /home/vagrant/container/proc
+
+$ sudo umount /home/vagrant/container/proc
 ```
 
-### Busybox
-If you are now gathering a list of all your favorite utilities and want to build upon our container v1.0 example above, you should have a look at [busybox](https://www.busybox.net) (later we shall also visit [Alpine Linux](https://alpinelinux.org/)).
+---
 
-BusyBox is a multipurpose single executable, optimized in size, that combines many common Unix utilities:
-```
-apt-get install busybox-static
+## Exercise 2 — BusyBox: a complete userland in one file
 
-mkdir -p busybox/bin
-cd busybox
+Rebuilding a real Linux root filesystem by copying binaries and libraries one-by-one is painful. There's a better way: [BusyBox](https://www.busybox.net) — the Swiss-army-knife of embedded Linux. It packs ~400 Unix tools into a single statically-linked binary.
+
+> **Goal**: create a *fully self-contained* rootfs with a single binary, then chroot into it.
+
+```bash
+cd /home/vagrant/container101
+mkdir busybox && cd busybox
 cp /bin/busybox bin/
 
 ./bin/busybox
-BusyBox v1.27.2 (Ubuntu 1:1.27.2-2ubuntu3.2) multi-call binary.
-BusyBox is copyrighted by many authors between 1998-2015.
-Licensed under GPLv2. See source distribution for detailed
-copyright notices.
+# BusyBox v1.35.0 (Debian 1:1.35.0-3) multi-call binary.
+# ... long usage banner ...
 
-Usage: busybox [function [arguments]...]
-   or: busybox --list[-full]
-   or: busybox --install [-s] [DIR]
-   or: function [arguments]...
-
-	BusyBox is a multi-call binary that combines many common Unix
-	utilities into a single executable.  The shell in this build
-	is configured to run built-in utilities without $PATH search.
-	You don't need to install a link to busybox for each utility.
-	To run external program, use full path (/sbin/ip instead of ip).
-
-Currently defined functions:
-	[, [[, acpid, add-shell, addgroup, adduser, adjtimex, arch, arp, arping, ash, awk, base64, basename, beep,
-...
-	who, whoami, whois, xargs, xxd, xz, xzcat, yes, zcat, zcip
+./bin/busybox --list | head
 ```
 
-With BusyBox you can prime your container quikly with allmost 400 tools:
-```
-./bin/busybox --install ./bin/
-chroot . /bin/sh
+`--list` shows which programs are compiled in (e.g. `sh`, `ls`, `ps`, `top`, `mkdir`, `mount`). Let's install them as symlinks, then chroot:
 
-# inside the chroot environment
-mkdir /proc
-mount -t proc proc /proc
-top
+```bash
+./bin/busybox --install bin/
+$ sudo chroot . /bin/sh
+
+/ # mkdir /proc && mount -t proc proc /proc
+/ # top
 ```
 
-### Next ...
-In the next sections we will learn how to utilize proper namespace virtualization/isolation and cgroups.
+`top` inside the chroot shows **only host processes** — again, **no namespace isolation**. But *resource isolation* is still possible: run `stress` in a cgroup from [chapter 03](03cgroups.md).
+
+---
+
+## What did we learn?
+
+| Concept | What chroot gives you | What's missing |
+|--------|----------------------|----------------|
+| Filesystem isolation | ✅ Yes | |
+| Process isolation | ❌ No (`ps` shows all PIDs) | Namespaces |
+| Resource control | ❌ No | cgroups |
+| Network isolation | ❌ No | net namespace |
+| User/authentication isolation | ❌ No | uid namespaces |
+
+`chroot` is a **one-line container**, but no container at all in modern terms. Chapters 03 and 04 add the missing pieces.
+
+---
+
+**Next →** [03 cgroups & namespaces](03cgroups.md) — resource control via control groups

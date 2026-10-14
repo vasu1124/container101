@@ -1,4 +1,6 @@
-# 07 What about rkt? → systemd-nspawn (updated)
+# 07 · systemd-nspawn — the systemd-native container runtime
+
+> **Goal**: Understand that "containers" aren't only Docker. systemd ships a native container tool that uses the same namespaces + cgroups primitives you already know.
 
 >Historical note: this chapter originally covered CoreOS **rkt** — an alternative OCI-compatible container runtime that pioneered a systemd-native process model, upstream-Docker image support, and hard security defaults. **rkt was archived in February 2020** (CNCF [announcement](https://www.cncf.io/blog/2020/02/24/cncf-archives-the-rkt-project/)) and is no longer installable. The idea it championed — *containers started and supervised like system services* — did not die with it; it **won**. Today it exists as:
 >1. **CGroups/namespace delegation** — the "process model" rkt introduced is now the de-facto standard: runc-mediated containers from Docker/containerd run directly under a systemd-owned cgroup, just like rkt did.
@@ -72,3 +74,7 @@ Explore building your own OCI compliant container runtime with 'containers from 
 [![What Have Namespaces Done for You Lately?](https://img.youtube.com/vi/MHv6cWjvQjM/0.jpg)](https://www.youtube.com/watch?v=MHv6cWjvQjM) 
 
 * Safari Course Video [Building Containers from Scratch with Go](https://www.safaribooksonline.com/library/view/building-containers-from/9781491988404/) by Liz Rice
+
+---
+
+**Next →** [08 Tuning of Permissions & Security](08security.md) — capabilities and how to drop them
